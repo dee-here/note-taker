@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require ('fs');
 const { v4: uuid } = require('uuid');
 const {readFromFile, writeToFile, readAndUpdate } = require('./helpers/fsUtils');
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const app = express();
 
 //parse json and url encoded requests
