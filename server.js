@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require ('fs');
 const { v4: uuid } = require('uuid');
-const {readFromFile, writeToFile, readAndAppend } = require('./helpers/fsUtils');
+const {readFromFile, writeToFile, readAndUpdate } = require('./helpers/fsUtils');
 const PORT = 3001;
 const app = express();
 
@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static('public'));
 
-// Get HTML route for / 
+// Get HTML routes for / 
 app.get('/', (req, res) => 
     res.sendFile(path.join(__dirname, '/public/index.html'))
 );
@@ -21,11 +21,11 @@ app.get('/notes', (req, res) =>
     res.sendFile(path.join(__dirname, '/public/notes.html'))
 );
 
-
-// api requests
+// /api requests
 app.get("/api/notes", (req, res) => {
   readFromFile("./db/db.json")
-    .then((data => res.json(JSON.parse(data))));
+    .then((data => res.json(JSON.parse(data))))
+    .catch((error) => console.log(`Error reading file: ${error.message}`));
 });
 
 //  if get matches nothing.. return them to index.html
@@ -42,8 +42,7 @@ app.post('/api/notes', (req, res) => {
             text,
             id: uuid(),
         }
-        readAndAppend(newNote, './db/db.json');
-        // console.log(res);
+        readAndUpdate(newNote, './db/db.json');
         res.status(201).json(newNote);        
     } else {
         res.status(500).json('Error in posting Note');
@@ -53,21 +52,24 @@ app.post('/api/notes', (req, res) => {
 //DELETE
 app.delete("/api/notes/:id", (req, res) => {
   //get all the notes from file
-  //filter notes that dont match the params id
+  //filter notes that dont match the note id from req.parms.id
   //write that back to file.
 
   const idToDelete = req.params.id;
   if (!!idToDelete) {
-    readFromFile("./db/db.json").then((data) => {
-        let newNotes = JSON.parse(data);
-        newNotes = newNotes.filter((note) => note.id !== idToDelete);
-        writeToFile("./db/db.json", newNotes);
-      });
-      res.status(200).json(`Note with id: ${idToDelete} deleted`);
+    readFromFile("./db/db.json")
+        .then((data) => {
+            let newNotes = JSON.parse(data);
+            newNotes = newNotes.filter((note) => note.id !== idToDelete);
+            writeToFile("./db/db.json", newNotes);
+            res.status(200).json(`Note with id: ${idToDelete} deleted`);
+        })
+        .catch((error) => {
+            console.log(`Error reading file: ${error.message}`);
+        });
   } else {
-    res.status(500).json('Error in deleting Note');
+    res.status(500).json("Error in deleting Note");
   }
-
 });
 
 app.listen(PORT, () => 
